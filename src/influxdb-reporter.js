@@ -20,7 +20,8 @@ class InfluxDBReporter {
         failed: [],
         skipped: []
       },
-      list: []
+      list: [],
+      extra: {}
     };
     const events = 'start iteration beforeItem item script request test assertion console exception done'.split(' ');
     events.forEach((e) => { if (typeof this[e] == 'function') newmanEmitter.on(e, (err, args) => this[e](err, args)) });
@@ -54,6 +55,13 @@ class InfluxDBReporter {
       this.context.mode = 'http';
     }
 
+    for(const [key, value] of Object.entries(this.reporterOptions)) {
+      if(key.toLowerCase().startsWith("extra")){
+        const newKey = key.substring(5, key.length).toLowerCase();
+        this.context.extra[newKey] = value;
+      }
+    }
+
     const DataService = this.context.mode === 'udp' ? UdpService : HttpService;
     this.service = new DataService(this.context);
     console.log(`Starting collection: ${this.options.collection.name} ${this.context.id}`);
@@ -79,6 +87,7 @@ class InfluxDBReporter {
     console.log(`[${this.context.currentItem.index}] Running ${item.name}`);
 
     const data = {
+      ...this.context.extra,
       collection_name: this.options.collection.name, 
       request_name: item.name,
       url: request.url.toString(),
